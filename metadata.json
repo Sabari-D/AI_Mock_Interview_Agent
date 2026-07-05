@@ -1,0 +1,6 @@
+{
+  "name": "AI Mock Interview Agent Platform",
+  "description": "A premium, production-grade AI platform for real-time, voice-based mock interviews with General HR and Technical HR agents, incorporating real-time feedback, analytics, and gamified progress tracking.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
