@@ -156,15 +156,18 @@ export default function AdminView() {
   // Filter activities based on selection and query
   const filteredActivities = (stats?.userActivities ?? []).filter((act: any) => {
     const matchesUser = selectedUserForActivity ? act.userId === selectedUserForActivity : true;
-    const matchesQuery = activitySearchQuery
-      ? act.action.toLowerCase().includes(activitySearchQuery.toLowerCase()) ||
-        act.details.toLowerCase().includes(activitySearchQuery.toLowerCase())
+    const actionStr = act.action || '';
+    const detailsStr = act.details || '';
+    const queryStr = activitySearchQuery || '';
+    const matchesQuery = queryStr
+      ? actionStr.toLowerCase().includes(queryStr.toLowerCase()) ||
+        detailsStr.toLowerCase().includes(queryStr.toLowerCase())
       : true;
     return matchesUser && matchesQuery;
   });
 
   const getActionColor = (action: string) => {
-    const act = action.toLowerCase();
+    const act = (action || '').toLowerCase();
     if (act.includes('register') || act.includes('creat')) return 'bg-emerald-50 text-emerald-700 border border-emerald-200';
     if (act.includes('suspend') || act.includes('ban') || act.includes('delet')) return 'bg-rose-50 text-rose-700 border border-rose-200';
     if (act.includes('auth') || act.includes('login')) return 'bg-blue-50 text-blue-700 border border-blue-200';
@@ -635,7 +638,10 @@ export default function AdminView() {
               <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
                 {filteredActivities.slice(0, 30).map((act: any, idx: number) => {
                   const actUser = stats?.users?.find((u: any) => (u.id || u._id) === act.userId);
-                  const logTime = new Date(act.timestamp || act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                  const dateVal = act.timestamp || act.created_at;
+                  const logTime = dateVal 
+                    ? new Date(dateVal).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+                    : 'Unknown';
                   return (
                     <div key={act.id || idx} className="relative pl-4 border-l border-slate-200 last:border-0 pb-1">
                       {/* Circle bullet */}
@@ -644,13 +650,13 @@ export default function AdminView() {
                       <div className="space-y-1">
                         <div className="flex justify-between items-start gap-2">
                           <span className={`text-[8px] font-mono font-bold tracking-wider uppercase px-1.5 py-0.5 rounded ${getActionColor(act.action)}`}>
-                            {act.action}
+                            {act.action || 'activity'}
                           </span>
                           <span className="text-[9px] font-mono text-slate-400 font-bold shrink-0">{logTime}</span>
                         </div>
                         
                         <p className="text-xs text-slate-700 font-sans leading-relaxed">
-                          {act.details}
+                          {act.details || ''}
                         </p>
 
                         <div className="flex items-center gap-1 text-[9px] font-mono text-slate-400 font-semibold">
@@ -682,11 +688,11 @@ export default function AdminView() {
               className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2"
             >
               <div>
-                <span className="text-rose-700 font-extrabold mr-1">[{log.action.toUpperCase()}]</span>
-                <span>{log.details}</span>
+                <span className="text-rose-700 font-extrabold mr-1">[{(log.action || '').toUpperCase()}]</span>
+                <span>{log.details || ''}</span>
               </div>
               <span className="text-slate-400 text-[9px] shrink-0">
-                {new Date(log.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                {log.timestamp ? new Date(log.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Unknown'}
               </span>
             </div>
           ))}
