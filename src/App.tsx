@@ -11,6 +11,7 @@ import HistoryView from './components/HistoryView';
 import LeaderboardView from './components/LeaderboardView';
 import LearningView from './components/LearningView';
 import AdminView from './components/AdminView';
+import ErrorBoundary from './components/ErrorBoundary';
 
 export default function App() {
   // Navigation State
@@ -477,14 +478,14 @@ export default function App() {
           <div className="pt-4 border-t border-blue-900/40 flex flex-col gap-3">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-xs text-blue-400 uppercase shrink-0">
-                {user.username.slice(0, 2)}
+                {(user?.username || 'Candidate').slice(0, 2)}
               </div>
               <div className="truncate">
                 <span className="text-xs font-bold text-white block truncate">
-                  {user.username}
+                  {user?.username || 'Candidate'}
                 </span>
                 <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">
-                  {user.role} role
+                  {user?.role || 'candidate'} role
                 </span>
               </div>
             </div>
@@ -512,7 +513,7 @@ export default function App() {
               {activeTab === 'admin' && 'Admin Operations'}
             </h1>
             <p className="text-xs text-slate-500 font-medium">
-              Welcome back, {user.username} • Placement Phase II
+              Welcome back, {user?.username || 'Candidate'} • Placement Phase II
             </p>
           </div>
           <div className="flex items-center gap-4">
@@ -537,27 +538,39 @@ export default function App() {
         <div className="flex-1 overflow-y-auto p-8 bg-[#F3F4F6]">
           <div className="max-w-5xl mx-auto w-full pb-12">
             {activeTab === 'dashboard' && (
-              <DashboardView stats={stats} onNavigate={setActiveTab} />
+              <ErrorBoundary fallbackTitle="Dashboard Crash">
+                <DashboardView stats={stats} onNavigate={setActiveTab} />
+              </ErrorBoundary>
             )}
 
             {activeTab === 'practice' && (
-              <PracticeView onNavigate={setActiveTab} onRefreshStats={loadDashboardStats} />
+              <ErrorBoundary fallbackTitle="Practice Prep Room Crash">
+                <PracticeView onNavigate={setActiveTab} onRefreshStats={loadDashboardStats} />
+              </ErrorBoundary>
             )}
 
             {activeTab === 'history' && (
-              <HistoryView onNavigate={setActiveTab} />
+              <ErrorBoundary fallbackTitle="History View Crash">
+                <HistoryView onNavigate={setActiveTab} />
+              </ErrorBoundary>
             )}
 
             {activeTab === 'leaderboard' && (
-              <LeaderboardView />
+              <ErrorBoundary fallbackTitle="Leaderboard View Crash">
+                <LeaderboardView />
+              </ErrorBoundary>
             )}
 
             {activeTab === 'learn' && (
-              <LearningView />
+              <ErrorBoundary fallbackTitle="Learning View Crash">
+                <LearningView />
+              </ErrorBoundary>
             )}
 
             {activeTab === 'admin' && user.role === 'admin' && (
-              <AdminView />
+              <ErrorBoundary fallbackTitle="Admin View Crash">
+                <AdminView />
+              </ErrorBoundary>
             )}
 
             {activeTab === 'admin' && user.role !== 'admin' && (

@@ -227,6 +227,13 @@ async function startServer() {
     res.json({ success: true, resumeId: resume.id, chunksCount: chunks.length });
   });
 
+  app.delete('/api/resume', async (req, res) => {
+    if (!req.user) return res.status(401).json({ error: 'Unauthenticated.' });
+    await db.resumes.deleteOne({ userId: req.user.id });
+    await logUserActivity(req.user.id, 'Resume Removal', 'Removed grounded resume content.');
+    res.json({ success: true });
+  });
+
   app.get('/api/resume', async (req, res) => {
     if (!req.user) return res.status(401).json({ error: 'Unauthenticated.' });
     const resume = await db.resumes.findOne({ userId: req.user.id });
@@ -234,10 +241,11 @@ async function startServer() {
       return res.status(404).json({ error: 'No resume found.' });
     }
     res.json({
-      id: resume.id,
+      id: resume.id || resume._id,
       fileName: resume.fileName,
       uploadedAt: resume.uploadedAt,
-      textLength: resume.parsedText.length,
+      parsedText: resume.parsedText || '',
+      textLength: (resume.parsedText || '').length,
     });
   });
 
@@ -510,9 +518,13 @@ async function startServer() {
     }
 
     try {
+      const promptText = voice === 'Kore'
+        ? `You are Sarah, a warm and professional female HR interviewer. Speak this naturally and clearly: ${text}`
+        : `You are Alex, a precise, smart and professional male technical interviewer. Speak this naturally and clearly: ${text}`;
+
       const response = await ai.models.generateContent({
         model: 'gemini-3.1-flash-tts-preview',
-        contents: [{ parts: [{ text: `Say naturally: ${text}` }] }],
+        contents: [{ parts: [{ text: promptText }] }],
         config: {
           responseModalities: [Modality.AUDIO],
           speechConfig: {

@@ -93,6 +93,7 @@ export default function PracticeView({ onNavigate, onRefreshStats }: PracticeVie
     reader.onload = (event) => {
       const text = event.target?.result as string;
       setResumeText(text || '');
+      setIsResumeSaved(false);
     };
     reader.readAsText(file);
   };
@@ -108,6 +109,23 @@ export default function PracticeView({ onNavigate, onRefreshStats }: PracticeVie
       });
       if (res.ok) {
         setIsResumeSaved(true);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsUploadingResume(false);
+    }
+  };
+
+  const handleDeleteResume = async () => {
+    if (!window.confirm("Are you sure you want to remove your uploaded resume?")) return;
+    setIsUploadingResume(true);
+    try {
+      const res = await fetch('/api/resume', { method: 'DELETE' });
+      if (res.ok) {
+        setResumeFileName('');
+        setResumeText('');
+        setIsResumeSaved(false);
       }
     } catch (err) {
       console.error(err);
@@ -189,11 +207,22 @@ export default function PracticeView({ onNavigate, onRefreshStats }: PracticeVie
       const voices = window.speechSynthesis.getVoices();
       if (selectedType === 'general_hr') {
         // Find a warm female system voice
-        const femaleVoice = voices.find(v => v.name.includes('Google US English') || v.name.includes('Samantha') || v.name.includes('Zira'));
+        const femaleVoice = voices.find(v =>
+          v.name.toLowerCase().includes('female') ||
+          v.name.toLowerCase().includes('samantha') ||
+          v.name.toLowerCase().includes('zira') ||
+          v.name.toLowerCase().includes('hazel') ||
+          v.name.toLowerCase().includes('google us english')
+        );
         if (femaleVoice) utterance.voice = femaleVoice;
       } else {
         // Precise male voice
-        const maleVoice = voices.find(v => v.name.includes('Google UK English Male') || v.name.includes('Daniel') || v.name.includes('David'));
+        const maleVoice = voices.find(v =>
+          v.name.toLowerCase().includes('male') ||
+          v.name.toLowerCase().includes('daniel') ||
+          v.name.toLowerCase().includes('david') ||
+          v.name.toLowerCase().includes('google uk english male')
+        );
         if (maleVoice) utterance.voice = maleVoice;
       }
       utterance.rate = 1.0;
@@ -473,7 +502,7 @@ export default function PracticeView({ onNavigate, onRefreshStats }: PracticeVie
               {resumeFileName && (
                 <div className="mt-3 text-xs text-slate-700 font-mono bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg flex justify-between items-center">
                   <span className="truncate">{resumeFileName}</span>
-                  <span className="text-slate-500 shrink-0">{Math.round(resumeText.length / 1024)} KB</span>
+                  <span className="text-slate-500 shrink-0">{Math.round((resumeText || '').length / 1024)} KB</span>
                 </div>
               )}
 
@@ -483,9 +512,10 @@ export default function PracticeView({ onNavigate, onRefreshStats }: PracticeVie
                   Paste / Edit Resume Content Directly:
                 </label>
                 <textarea
-                  value={resumeText}
+                  value={resumeText || ''}
                   onChange={(e) => {
                     setResumeText(e.target.value);
+                    setIsResumeSaved(false);
                     if (!resumeFileName) setResumeFileName('resume_content.txt');
                   }}
                   placeholder="Paste your skills, languages, professional experience, projects, or certifications here..."
@@ -494,11 +524,20 @@ export default function PracticeView({ onNavigate, onRefreshStats }: PracticeVie
               </div>
             </div>
 
-            <div className="mt-6 border-t border-slate-100 pt-6">
+            <div className="mt-6 border-t border-slate-100 pt-6 flex gap-3">
+              {isResumeSaved && (
+                <button
+                  onClick={handleDeleteResume}
+                  disabled={isUploadingResume}
+                  className="px-4 py-2.5 text-xs font-semibold uppercase border border-rose-250 bg-rose-50 text-rose-700 hover:bg-rose-100 hover:border-rose-300 transition duration-200 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95 shrink-0"
+                >
+                  Remove
+                </button>
+              )}
               <button
                 onClick={handleSaveResume}
-                disabled={isUploadingResume || !resumeText}
-                className="w-full py-2.5 text-xs font-semibold uppercase border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition duration-200 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                disabled={isUploadingResume || !resumeText || isResumeSaved}
+                className="flex-1 py-2.5 text-xs font-semibold uppercase border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 transition duration-200 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer active:scale-95"
               >
                 {isUploadingResume ? (
                   <>

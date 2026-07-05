@@ -445,19 +445,22 @@ export default function AdminView() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {stats?.users?.map((usr: any) => {
-                    const isUserOnline = stats?.activeSessions?.some((s: any) => s.userId === usr.id);
+                    const userId = usr.id || usr._id;
+                    const isUserOnline = stats?.activeSessions?.some((s: any) => s.userId === userId);
+                    const displayName = usr.username || 'Candidate';
+                    const displayEmail = usr.email || 'No email registered';
                     return (
                       <tr 
-                        key={usr.id} 
+                        key={userId} 
                         className={`hover:bg-slate-50/50 transition duration-150 ${
-                          selectedUserForActivity === usr.id ? 'bg-blue-50/20' : ''
+                          selectedUserForActivity === userId ? 'bg-blue-50/20' : ''
                         }`}
                       >
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-2.5">
                             <div className="relative">
                               <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center font-bold text-xs text-[#0B1E3F] uppercase">
-                                {usr.username.slice(0, 2)}
+                                {displayName.slice(0, 2)}
                               </div>
                               {isUserOnline && (
                                 <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white"></span>
@@ -465,12 +468,12 @@ export default function AdminView() {
                             </div>
                             <div>
                               <div className="flex items-center gap-1.5">
-                                <span className="font-bold text-[#0B1E3F] text-xs font-sans">{usr.username}</span>
-                                {usr.email === 'sabaridhandapani69@gmail.com' && (
+                                <span className="font-bold text-[#0B1E3F] text-xs font-sans">{displayName}</span>
+                                {displayEmail === 'sabaridhandapani69@gmail.com' && (
                                   <span className="text-[8px] font-mono bg-indigo-50 border border-indigo-100 text-indigo-700 px-1 rounded-sm uppercase font-bold">Owner</span>
                                 )}
                               </div>
-                              <span className="text-[10px] text-slate-500 font-mono block">{usr.email}</span>
+                              <span className="text-[10px] text-slate-500 font-mono block">{displayEmail}</span>
                             </div>
                           </div>
                         </td>
@@ -502,14 +505,14 @@ export default function AdminView() {
                             {/* Filter user activity */}
                             <button
                               onClick={() => {
-                                if (selectedUserForActivity === usr.id) {
+                                if (selectedUserForActivity === userId) {
                                   setSelectedUserForActivity(null);
                                 } else {
-                                  setSelectedUserForActivity(usr.id);
+                                  setSelectedUserForActivity(userId);
                                 }
                               }}
                               className={`px-2 py-1 text-[10px] font-mono font-bold uppercase rounded-lg border transition duration-150 cursor-pointer ${
-                                selectedUserForActivity === usr.id
+                                selectedUserForActivity === userId
                                   ? 'bg-[#0B1E3F] text-white border-[#0B1E3F]'
                                   : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-[#0B1E3F]'
                               }`}
@@ -526,7 +529,7 @@ export default function AdminView() {
                             ) : (
                               <>
                                 <button
-                                  onClick={() => handleToggleBan(usr.id, usr.isBanned)}
+                                  onClick={() => handleToggleBan(userId, usr.isBanned)}
                                   disabled={banningUser !== null}
                                   className={`p-1.5 rounded-lg border transition duration-150 cursor-pointer ${
                                     usr.isBanned
@@ -535,7 +538,7 @@ export default function AdminView() {
                                   }`}
                                   title={usr.isBanned ? 'Lift suspension' : 'Suspend Candidate'}
                                 >
-                                  {banningUser === usr.id ? (
+                                  {banningUser === userId ? (
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   ) : usr.isBanned ? (
                                     <CheckCircle2 className="w-3.5 h-3.5" />
@@ -546,12 +549,12 @@ export default function AdminView() {
 
                                 {/* Permanent account removal */}
                                 <button
-                                  onClick={() => handleDeleteUser(usr.id, usr.username)}
+                                  onClick={() => handleDeleteUser(userId, displayName)}
                                   disabled={deletingUser !== null}
                                   className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition duration-150 cursor-pointer"
                                   title="Permanently Delete Account"
                                 >
-                                  {deletingUser === usr.id ? (
+                                  {deletingUser === userId ? (
                                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
                                   ) : (
                                     <Trash2 className="w-3.5 h-3.5" />
@@ -631,7 +634,7 @@ export default function AdminView() {
             ) : (
               <div className="space-y-4 max-h-[420px] overflow-y-auto pr-1">
                 {filteredActivities.slice(0, 30).map((act: any, idx: number) => {
-                  const actUser = stats?.users?.find((u: any) => u.id === act.userId);
+                  const actUser = stats?.users?.find((u: any) => (u.id || u._id) === act.userId);
                   const logTime = new Date(act.timestamp || act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                   return (
                     <div key={act.id || idx} className="relative pl-4 border-l border-slate-200 last:border-0 pb-1">
@@ -653,7 +656,7 @@ export default function AdminView() {
                         <div className="flex items-center gap-1 text-[9px] font-mono text-slate-400 font-semibold">
                           <span>User:</span>
                           <span className="text-[#0B1E3F] font-bold">
-                            {actUser ? actUser.username : `ID: ${act.userId.slice(0, 5)}...`}
+                            {actUser ? actUser.username : `ID: ${act.userId ? act.userId.slice(0, 5) : 'Unknown'}...`}
                           </span>
                         </div>
                       </div>

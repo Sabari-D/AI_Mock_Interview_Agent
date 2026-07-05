@@ -9,7 +9,7 @@ let client: MongoClient | null = null;
 
 export async function getMongoClient() {
   if (!uri) throw new Error('MONGODB_URI not set');
-  if (client && client.topology && client.topology.isConnected && client.topology.isConnected()) return client;
+  if (client) return client;
   client = new MongoClient(uri);
   await client.connect();
   return client;

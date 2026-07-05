@@ -59,23 +59,9 @@ function saveDB() {
 // Load database immediately
 loadDB();
 
-// If MONGODB_URI is provided, attempt to connect and use MongoDB collections.
+// If MONGODB_URI is provided, we will attempt remote connections lazily.
 const USE_REMOTE_DB = !!process.env.MONGODB_URI;
-let remoteAvailable = false;
 let mongoClientPromise: Promise<any> | null = null;
-if (USE_REMOTE_DB) {
-  mongoClientPromise = (async () => {
-    try {
-      const client = await getMongoClient();
-      remoteAvailable = true;
-      return client;
-    } catch (e) {
-      console.error('Could not connect to MongoDB, using local JSON DB as fallback', e);
-      remoteAvailable = false;
-      return null;
-    }
-  })();
-}
 
 // Collection implementation that mimics MongoDB APIs
 class FileMongoCollection<T extends { id?: string; _id?: string; [key: string]: any }> {
@@ -241,14 +227,32 @@ class FileMongoCollection<T extends { id?: string; _id?: string; [key: string]: 
 // Remote collection wrapper that uses the mongodb driver
 class RemoteMongoCollection<T extends { id?: string; _id?: string; [key: string]: any }> {
   private collName: string;
+  private fallback: FileMongoCollection<T>;
+
   constructor(name: string) {
     this.collName = name;
+    this.fallback = new FileMongoCollection<T>(name);
+  }
+
+  private async initializeClient() {
+    if (!mongoClientPromise) {
+      mongoClientPromise = (async () => {
+        try {
+          return await getMongoClient();
+        } catch (err: any) {
+          mongoClientPromise = null;
+          throw err;
+        }
+      })();
+    }
+    return mongoClientPromise;
   }
 
   private async coll() {
-    if (!mongoClientPromise) throw new Error('Mongo client not initialized');
-    const client = await mongoClientPromise;
-    if (!client) throw new Error('Mongo client not available');
+    const client = await this.initializeClient();
+    if (!client) {
+      throw new Error('Mongo client not available');
+    }
     const dbName = process.env.MONGODB_DB || 'Mock_Agent';
     if (!(client as any).__mockAgentConnected) {
       console.log('Remote MongoDB connected:', {
@@ -261,50 +265,95 @@ class RemoteMongoCollection<T extends { id?: string; _id?: string; [key: string]
     return client.db(dbName).collection(this.collName);
   }
 
+  private async remoteOrFallback<TRes>(
+    remoteFn: (collection: any) => Promise<TRes>,
+    fallbackFn: (fallback: FileMongoCollection<T>) => Promise<TRes>
+  ): Promise<TRes> {
+    try {
+      const collection = await this.coll();
+      return await remoteFn(collection);
+    } catch (err: any) {
+      console.warn(`Remote MongoDB unavailable for collection ${this.collName}, falling back to local JSON DB.`, err.message || err);
+      return fallbackFn(this.fallback);
+    }
+  }
+
   async find(query: Partial<T> = {}) {
-    const collection = await this.coll();
-    return collection.find(query).toArray();
+    return this.remoteOrFallback(
+      collection => collection.find(query).toArray(),
+      fallback => fallback.find(query)
+    );
   }
 
   async findOne(query: Partial<T> = {}) {
-    const collection = await this.coll();
-    return collection.findOne(query);
+    return this.remoteOrFallback(
+      collection => collection.findOne(query),
+      fallback => fallback.findOne(query)
+    );
   }
 
   async insertOne(doc: any) {
-    const collection = await this.coll();
-    const r = await collection.insertOne(doc);
-    return await collection.findOne({ _id: r.insertedId });
+    return this.remoteOrFallback(
+      async (collection) => {
+        const id = doc.id || doc._id || Math.random().toString(36).substring(2, 11);
+        const newDoc = {
+          id,
+          _id: id,
+          ...doc,
+          created_at: doc.created_at || new Date().toISOString()
+        };
+        await collection.insertOne(newDoc);
+        return newDoc;
+      },
+      fallback => fallback.insertOne(doc)
+    );
   }
 
   async insertMany(docs: any[]) {
-    const collection = await this.coll();
-    await collection.insertMany(docs);
-    return docs;
+    return this.remoteOrFallback(
+      async (collection) => {
+        const newDocs = docs.map(doc => {
+          const id = doc.id || doc._id || Math.random().toString(36).substring(2, 11);
+          return {
+            id,
+            _id: id,
+            ...doc,
+            created_at: doc.created_at || new Date().toISOString()
+          };
+        });
+        await collection.insertMany(newDocs);
+        return newDocs;
+      },
+      fallback => fallback.insertMany(docs)
+    );
   }
 
   async updateOne(query: Partial<T>, update: Partial<T>) {
-    const collection = await this.coll();
-    const r = await collection.updateOne(query as any, { $set: update as any });
-    return { modifiedCount: r.modifiedCount };
+    return this.remoteOrFallback(
+      collection => collection.updateOne(query as any, { $set: update as any }),
+      fallback => fallback.updateOne(query, update)
+    );
   }
 
   async updateMany(query: Partial<T>, update: Partial<T>) {
-    const collection = await this.coll();
-    const r = await collection.updateMany(query as any, { $set: update as any });
-    return { modifiedCount: r.modifiedCount };
+    return this.remoteOrFallback(
+      collection => collection.updateMany(query as any, { $set: update as any }),
+      fallback => fallback.updateMany(query, update)
+    );
   }
 
   async deleteOne(query: Partial<T>) {
-    const collection = await this.coll();
-    const r = await collection.deleteOne(query as any);
-    return { deletedCount: r.deletedCount };
+    return this.remoteOrFallback(
+      collection => collection.deleteOne(query as any),
+      fallback => fallback.deleteOne(query)
+    );
   }
 
   async deleteMany(query: Partial<T>) {
-    const collection = await this.coll();
-    const r = await collection.deleteMany(query as any);
-    return { deletedCount: r.deletedCount };
+    return this.remoteOrFallback(
+      collection => collection.deleteMany(query as any),
+      fallback => fallback.deleteMany(query)
+    );
   }
 }
 
