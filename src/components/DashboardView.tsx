@@ -71,7 +71,7 @@ export default function DashboardView({ stats, onNavigate }: DashboardProps) {
                 strokeWidth="1"
               />
             ))}
-            
+
             {/* Grid Axes */}
             {metrics.map((_, i) => {
               const angle = (Math.PI * 2 / pointsCount) * i - Math.PI / 2;
@@ -191,7 +191,7 @@ export default function DashboardView({ stats, onNavigate }: DashboardProps) {
             const count = activityMap.get(dateStr) || 0;
             const dateObj = new Date(dateStr);
             const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-            
+
             let color = 'bg-slate-100 border-slate-200 hover:bg-slate-200 text-slate-500';
             if (count === 1) color = 'bg-blue-50 border-blue-200 text-blue-600';
             if (count === 2) color = 'bg-blue-100 border-blue-300 text-blue-700';
@@ -240,7 +240,7 @@ export default function DashboardView({ stats, onNavigate }: DashboardProps) {
             Campus Placement Ready
           </span>
           <h1 className="text-3xl md:text-4xl font-black text-white tracking-tight leading-none mb-3 font-display">
-            AI Mock Interview Agent
+            Automated Talent Evaluator
           </h1>
           <p className="text-xs text-slate-200 mb-6 leading-relaxed font-sans">
             Harness state-of-the-art dual AI interviewers to perfect your behavioral poise, syntactical grammar, and tech explanation skills. Gamified progress, vector-embedded resume validation, and real-time clarity analysis in one premium dashboard.
